@@ -21,12 +21,16 @@ uv run marimo edit notebook.py
 ## How the website is built
 
 ```bash
-sudo apt install nginx
-sudo vim /etc/nginx/conf.d/marimo.conf
-# after editing the file, run `sudo nginx -s reload` to apply the changes
+sudo apt install nginx git
 
+git clone https://github.com/timeplus-io/marimo.demo.timeplus.com.git
+cd marimo.demo.timeplus.com
 # start fastapi server in the background
 nohup uv run main.py > marimo.log 2>&1 &
+
+sudo vim /etc/nginx/conf.d/marimo.conf
+# after editing the file, run
+sudo nginx -s reload
 ```
 
 ### marimo.conf
@@ -51,4 +55,18 @@ server {
         proxy_read_timeout  600;
     }
 }
+```
+
+### How to update the demo website
+Make change locally and push to the `main` branch.
+On the remote server, run the following commands:
+```bash
+cd /path/to/marimo.demo.timeplus.com
+git pull origin main
+# find the background process id
+ps aux | grep marimo
+# kill the process
+kill -9 <pid>
+# restart the fastapi server
+nohup uv run main.py > marimo.log 2>&1 &
 ```
