@@ -6,7 +6,7 @@ from fastapi import FastAPI, Form, Request, Response
 server = (
     marimo.create_asgi_app()
     .with_app(path="/", root="./index.py")
-    .with_app(path="/partial", root="./partial_update.py")
+    .with_app(path="/partial", root="./notebooks/partial_update.py")
 )
 app = FastAPI()
 
