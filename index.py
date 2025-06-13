@@ -14,7 +14,9 @@ def _():
 def _(mo):
     mo.md(
         r"""
-    # Timeplus Notebooks
+    # Timeplus Notebooks 
+    [timeplus.com](https://timeplus.com) | [Notebook Source Code](https://github.com/timeplus-io/marimo.demo.timeplus.com/) 
+
     - [Coalesced Mutable Stream - Read data from multiple Kafka topics and create/update a wide table by ID](/partial)
     """
     )
