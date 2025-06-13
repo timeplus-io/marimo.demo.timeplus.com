@@ -109,6 +109,35 @@ def _(days, engine, mo):
         """,
         engine=engine
     )
+    repo_table = mo.ui.table(
+        _df,
+        selection='single',
+        label="Top 20 Projects with Most New Stars"
+    )
+    repo_table
+    return (repo_table,)
+
+
+@app.cell
+def _(mo, repo_table):
+    mo.md(
+        f"""
+    Go visit [{repo_table.value[0,'repo']}](https://github.com/{repo_table.value[0,'repo']})
+    <hr>
+
+    """
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    def on_repo_row_select(selection):
+        if selection.rows:
+            # Assuming the 'repo' column contains the 'owner/repo_name' string
+            selected_repo = selection.rows[0]["repo"]
+            github_url = f"https://github.com/{selected_repo}"
+            mo.redirect(github_url, new_tab=True)
     return
 
 
