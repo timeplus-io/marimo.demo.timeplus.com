@@ -14,7 +14,7 @@ def _():
 def _():
     import sqlalchemy
 
-    DATABASE_URL = "timeplus://demo:demo123@34.127.47.225:8123"
+    DATABASE_URL = "timeplus://demo:demo123@34.82.135.191:8123"
     #DATABASE_URL = "timeplus://play.us-west1-a.c.tpdemo2025.internal:8123"
     engine = sqlalchemy.create_engine(DATABASE_URL)
     return (engine,)
