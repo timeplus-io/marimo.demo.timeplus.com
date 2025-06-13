@@ -21,7 +21,9 @@ def _(mo):
     mo.md(
         r"""
     # Live GitHub Events
-        👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events)
+    👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events). 
+
+    Source code at [GitHub](https://github.com/timeplus-io/marimo.demo.timeplus.com/blob/main/notebooks/github.py) | [More details of this demo]([https://demos.timeplus.com](https://demos.timeplus.com/#/id/github))
     """
     )
     return
@@ -35,32 +37,85 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    cntRefresh = mo.ui.refresh(options=["2s"],default_interval="2s")
+    cntRefresh = mo.ui.refresh(options=["4s"],default_interval="4s")
     return (cntRefresh,)
 
 
 @app.cell
-def _(df_cnt, get_count, mo, set_count):
-    _new_count=df_cnt["cnt"][0]
-    _diff=_new_count-get_count()
-    set_count(_new_count)
-    mo.stat(_new_count,label="In the Kafka topic",caption=f"{_diff} events", direction="increase" if _diff >= 0 else "decrease")
-    return
-
-
-@app.cell
-def _(df_last, mo):
-    from datetime import datetime, timezone
-    event_time=datetime.strptime(df_last["created_at"][0],"%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
-    current_time = datetime.now(timezone.utc)
-    mo.stat(f"{datetime.strftime(event_time,"%H:%M:%S %m/%d")} (UTC)",label="Last Event",caption=f"{int((current_time - event_time).total_seconds()/60)} mins ago")
+def _(cntRefresh):
+    cntRefresh.style({"display": None})
     return
 
 
 @app.cell
 def _(mo):
-    refresh = mo.ui.refresh(label="Refresh",options=["5s", "10s", "30s"])
+    get_mv_count, set_mv_count = mo.state(0)
+    return get_mv_count, set_mv_count
+
+
+@app.cell
+def _(df_cnt, df_mv_cnt, get_count, get_mv_count, mo, set_count, set_mv_count):
+    _new_count = df_cnt["cnt"][0]
+    _diff = _new_count - get_count()
+    set_count(_new_count)
+    _new_mv_count = df_mv_cnt["cnt"][0]
+    _diff_mv = _new_mv_count - get_mv_count()
+    set_mv_count(_new_mv_count)
+    mo.hstack(
+        [
+            mo.stat(
+                _new_count,
+                label="The Kafka topic keeps recent 7 days data",
+                caption=f"{_diff} events",
+                direction="increase" if _diff >= 0 else "decrease",
+            ),
+            mo.stat(
+                _new_mv_count,
+                label="Unlimited data materiailzed in Timeplus",
+                caption=f"{_diff_mv} events",
+                direction="increase" if _diff >= 0 else "decrease",
+            ),
+        ]
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    refresh = mo.ui.refresh(label="Refresh",options=["2s", "5s", "10s"])
     return (refresh,)
+
+
+@app.cell
+def _(mo):
+    days=mo.ui.slider(start=1, stop=10, step=1,show_value=True)
+    return (days,)
+
+
+@app.cell
+def _(days, mo):
+    mo.md(f"""## 🔥 Top 20 Projects with most new stars (for last {days} days)""")
+    return
+
+
+@app.cell
+def _(days, engine, mo):
+    _df = mo.sql(
+        f"""
+        SELECT repo, count(distinct actor) AS new_followers
+        FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
+        GROUP BY repo ORDER BY new_followers desc
+        limit 20
+        """,
+        engine=engine
+    )
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""# Explore data via slider and charts""")
+    return
 
 
 @app.cell
@@ -78,24 +133,6 @@ def _(chart_types):
             _type=f"WHERE type='{_array[0]}'"
     typeWhere=_type
     return (typeWhere,)
-
-
-@app.cell
-def _(mo):
-    mo.md(r"""## Sample Events""")
-    return
-
-
-@app.cell
-def _(engine, mo, refresh):
-    df_last = mo.sql(
-        f"""
-        -- {refresh.value}
-        SELECT * FROM github_events order by _tp_time desc limit 3 settings seek_to='-10s'
-        """,
-        engine=engine
-    )
-    return (df_last,)
 
 
 @app.cell
@@ -118,6 +155,25 @@ def _(alt, df_hotrepo, mo):
                 y=alt.Y('repo',sort=alt.EncodingSortField(field='cnt',order='descending')),)
     )
     return (chart_repos,)
+
+
+@app.cell
+def _(mo):
+    get_count, set_count = mo.state(0)
+    return get_count, set_count
+
+
+@app.cell
+def _(cntRefresh, engine, mo):
+    df_mv_cnt = mo.sql(
+        f"""
+        -- {cntRefresh.value}
+        SELECT count() as cnt FROM mv_github_events
+        """,
+        output=False,
+        engine=engine
+    )
+    return (df_mv_cnt,)
 
 
 @app.cell
@@ -146,12 +202,6 @@ def _(engine, mo, range, refresh):
     return (df_type,)
 
 
-@app.cell
-def _(cntRefresh):
-    cntRefresh.style({"display": None})
-    return
-
-
 @app.cell(hide_code=True)
 def cell_cnt(cntRefresh, engine, mo):
     df_cnt = mo.sql(
@@ -163,12 +213,6 @@ def cell_cnt(cntRefresh, engine, mo):
         engine=engine
     )
     return (df_cnt,)
-
-
-@app.cell
-def _(mo):
-    get_count, set_count = mo.state(0)
-    return get_count, set_count
 
 
 if __name__ == "__main__":
