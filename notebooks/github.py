@@ -100,10 +100,6 @@ def _(days, mo):
 
 @app.cell
 def _(days, engine, mo):
-    import webbrowser
-    def on_row_change(table_value):
-        link = f"https://github.com/{table_value[0,'repo']}"
-        webbrowser.open_new(link)
     _df = mo.sql(
         f"""
         SELECT repo, count(distinct actor) AS new_followers
@@ -116,12 +112,21 @@ def _(days, engine, mo):
     repo_table = mo.ui.table(
         _df,
         selection='single',
-        on_change=on_row_change,
         label="Click the checkbox to visit the GitHub repo"
     )
     repo_table
     return
 
+@app.cell
+def _(mo, repo_table):
+    mo.md(
+        f"""
+    Go visit [{repo_table.value[0,'repo']}](https://github.com/{repo_table.value[0,'repo']})
+    <hr>
+
+    """
+    )
+    return
 
 @app.cell
 def _(mo):
