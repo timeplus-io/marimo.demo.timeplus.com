@@ -90,14 +90,25 @@ def _(days, mo):
 def _(days, engine, mo):
     _df = mo.sql(
         f"""
-        SELECT 'https://github.com/'||split_by_string('/',repo)[1]||'.png' as Owner,'https://github.com/'||repo as HotRepo, new_followers as StarLast{days.value}d FROM(
         SELECT repo, count(distinct actor) AS new_followers
         FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
         GROUP BY repo ORDER BY new_followers desc
-        limit 20)
+        limit 20
         """,
         engine=engine
     )
+    _ui = []
+    for row in _df.iter_rows():
+        owner_image = mo.image(src=f'https://github.com/{row[0].split('/')[0]}.png', width=20, height=20)
+        repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: inherit;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
+        _ui.append({
+            "Repo":repo_link,
+            f"New Stars for last {days.value} days": f'{row[1]:,}'
+        })
+    repo_table = mo.ui.table(
+        _ui,selection=None,show_column_summaries=False,label="💡Click first column to open the link"
+    )
+    repo_table
     return
 
 
