@@ -29,12 +29,6 @@ def _(mo):
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
-    range=mo.ui.slider(start=1, stop=10, step=1,label="View data for X minutes:", show_value=True)
-    return (range,)
-
-
 @app.cell
 def _(mo):
     cntRefresh = mo.ui.refresh(options=["4s"],default_interval="4s")
@@ -82,12 +76,6 @@ def _(df_cnt, df_mv_cnt, get_count, get_mv_count, mo, set_count, set_mv_count):
 
 @app.cell
 def _(mo):
-    refresh = mo.ui.refresh(label="Refresh",options=["2s", "5s", "10s"])
-    return (refresh,)
-
-
-@app.cell
-def _(mo):
     days=mo.ui.slider(start=1, stop=10, step=1,show_value=True, value=7)
     return (days,)
 
@@ -102,7 +90,7 @@ def _(days, mo):
 def _(days, engine, mo):
     _df = mo.sql(
         f"""
-        SELECT 'https://github.com/'||repo as HotRepo, new_followers as StarLast{days.value}d FROM(
+        SELECT 'https://github.com/'||split_by_string('/',repo)[1]||'.png' as Owner,'https://github.com/'||repo as HotRepo, new_followers as StarLast{days.value}d FROM(
         SELECT repo, count(distinct actor) AS new_followers
         FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
         GROUP BY repo ORDER BY new_followers desc
@@ -115,13 +103,13 @@ def _(days, engine, mo):
 
 @app.cell
 def _(mo):
-    mo.md(r"""# Explore data via slider and charts""")
+    mo.md(r"""# Explore repos by event type""")
     return
 
 
 @app.cell
-def _(chart_repos, chart_types, mo, range, refresh):
-    mo.vstack([mo.hstack([range,refresh]),mo.hstack([chart_types,chart_repos],widths=[0,1])])
+def _(chart_repos, chart_types, mo):
+    mo.hstack([chart_types,chart_repos],widths=[0,1])
     return
 
 
@@ -178,11 +166,10 @@ def _(cntRefresh, engine, mo):
 
 
 @app.cell
-def _(engine, mo, range, refresh, typeWhere):
+def _(engine, mo, typeWhere):
     df_hotrepo = mo.sql(
         f"""
-        -- {refresh.value}
-        with cte as(SELECT top_k(repo,10,true) as a FROM mv_github_events {typeWhere} limit 1 SETTINGS seek_to='-{range.value}m')
+        with cte as(SELECT top_k(repo,10,true) as a FROM mv_github_events {typeWhere} limit 1)
         select a.1 as repo,a.2 as cnt from cte array join a
         """,
         engine=engine
@@ -191,11 +178,10 @@ def _(engine, mo, range, refresh, typeWhere):
 
 
 @app.cell(hide_code=True)
-def _(engine, mo, range, refresh):
+def _(engine, mo):
     df_type = mo.sql(
         f"""
-        -- {refresh.value}
-        with cte as(SELECT top_k(type,10,true) as a FROM mv_github_events limit 1 SETTINGS seek_to='-{range.value}m')
+        with cte as(SELECT top_k(type,10,true) as a FROM mv_github_events limit 1)
         select a.1 as type,a.2 as cnt from cte array join a
         """,
         engine=engine
