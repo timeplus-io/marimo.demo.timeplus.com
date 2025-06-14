@@ -102,31 +102,16 @@ def _(days, mo):
 def _(days, engine, mo):
     _df = mo.sql(
         f"""
+        SELECT 'https://github.com/'||repo as HotRepo, new_followers as StarLast{days.value}d FROM(
         SELECT repo, count(distinct actor) AS new_followers
         FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
         GROUP BY repo ORDER BY new_followers desc
-        limit 20
+        limit 20)
         """,
         engine=engine
     )
-    repo_table = mo.ui.table(
-        _df,
-        selection='single',
-        label="Click the checkbox to visit the GitHub repo"
-    )
-    repo_table
     return
 
-@app.cell
-def _(mo, repo_table):
-    mo.md(
-        f"""
-    Go visit [{repo_table.value[0,'repo']}](https://github.com/{repo_table.value[0,'repo']})
-    <hr>
-
-    """
-    )
-    return
 
 @app.cell
 def _(mo):
