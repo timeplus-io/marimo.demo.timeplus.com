@@ -21,7 +21,7 @@ def _(mo):
     mo.md(
         r"""
     # Live GitHub Events
-    👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events). 
+    👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events).
 
     Source code at [GitHub](https://github.com/timeplus-io/marimo.demo.timeplus.com/blob/main/notebooks/github.py) | [More details of this demo]([https://demos.timeplus.com](https://demos.timeplus.com/#/id/github))
     """
@@ -100,6 +100,10 @@ def _(days, mo):
 
 @app.cell
 def _(days, engine, mo):
+    import webbrowser
+    def on_row_change(table_value):
+        link = f"https://github.com/{table_value[0,'repo']}"
+        webbrowser.open_new(link)
     _df = mo.sql(
         f"""
         SELECT repo, count(distinct actor) AS new_followers
@@ -112,32 +116,10 @@ def _(days, engine, mo):
     repo_table = mo.ui.table(
         _df,
         selection='single',
-        label="Top 20 Projects with Most New Stars"
+        on_change=on_row_change,
+        label="Click the checkbox to visit the GitHub repo"
     )
     repo_table
-    return (repo_table,)
-
-
-@app.cell
-def _(mo, repo_table):
-    mo.md(
-        f"""
-    Go visit [{repo_table.value[0,'repo']}](https://github.com/{repo_table.value[0,'repo']})
-    <hr>
-
-    """
-    )
-    return
-
-
-@app.cell
-def _(mo):
-    def on_repo_row_select(selection):
-        if selection.rows:
-            # Assuming the 'repo' column contains the 'owner/repo_name' string
-            selected_repo = selection.rows[0]["repo"]
-            github_url = f"https://github.com/{selected_repo}"
-            mo.redirect(github_url, new_tab=True)
     return
 
 
