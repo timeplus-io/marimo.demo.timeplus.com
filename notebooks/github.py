@@ -88,7 +88,7 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    days=mo.ui.slider(start=1, stop=10, step=1,show_value=True)
+    days=mo.ui.slider(start=1, stop=10, step=1,show_value=True, value=7)
     return (days,)
 
 
