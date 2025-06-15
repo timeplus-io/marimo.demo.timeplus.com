@@ -89,11 +89,13 @@ def _(days, mo):
 @app.cell
 def _(days, engine, mo):
     _df = mo.sql(
-        f"""
+        f"""SELECT repo,new_followers, description, stars, language FROM(SELECT gh_api('https://api.github.com/repos/'||repo) as info,
+        info:description AS description,to_int32_or_zero(info:stargazers_count) AS stars,info:language AS language,
+        * FROM(
         SELECT repo, count(distinct actor) AS new_followers
         FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
         GROUP BY repo ORDER BY new_followers desc
-        limit 20
+        limit 20))
         """,
         engine=engine
     )
@@ -102,7 +104,8 @@ def _(days, engine, mo):
         owner_image = mo.image(src=f'https://github.com/{row[0].split('/')[0]}.png', width=20, height=20)
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
-            "Repo":repo_link,
+            "Repo":repo_link,"Description":row[2],
+            "Total Stars":f'{row[3]:,}',"Language":row[4],
             f"New Stars for last {days.value} days": f'{row[1]:,}'
         })
     repo_table = mo.ui.table(
