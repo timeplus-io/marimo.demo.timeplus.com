@@ -139,9 +139,16 @@ def _(chart_types):
 
 
 @app.cell
-def _(alt, df_type, mo):
+def _(alt, engine, mo):
+    _df_type = mo.sql(
+        f"""
+        with cte as(SELECT top_k(type,10,true) as a FROM mv_github_events limit 1)
+        select a.1 as type,a.2 as cnt from cte array join a
+        """,
+        engine=engine,output=False
+    )
     chart_types = mo.ui.altair_chart(
-        alt.Chart(df_type, height=150, width=150)
+        alt.Chart(_df_type, height=150, width=150)
         .mark_arc()
         .encode(theta="cnt", color="type"),
         legend_selection=False
@@ -150,9 +157,16 @@ def _(alt, df_type, mo):
 
 
 @app.cell
-def _(alt, df_hotrepo, mo):
+def _(alt, engine, mo, typeWhere):
+    _df_hotrepo = mo.sql(
+        f"""
+        with cte as(SELECT top_k(repo,10,true) as a FROM mv_github_events {typeWhere} limit 1)
+        select a.1 as repo,a.2 as cnt from cte array join a
+        """,
+        engine=engine,output=False
+    )
     chart_repos = mo.ui.altair_chart(
-        alt.Chart(df_hotrepo, height=200)
+        alt.Chart(_df_hotrepo, height=200)
         .mark_bar()
         .encode(x='cnt',
                 y=alt.Y('repo',sort=alt.EncodingSortField(field='cnt',order='descending')),)
@@ -177,30 +191,6 @@ def _(cntRefresh, engine, mo):
         engine=engine
     )
     return (df_mv_cnt,)
-
-
-@app.cell
-def _(engine, mo, typeWhere):
-    df_hotrepo = mo.sql(
-        f"""
-        with cte as(SELECT top_k(repo,10,true) as a FROM mv_github_events {typeWhere} limit 1)
-        select a.1 as repo,a.2 as cnt from cte array join a
-        """,
-        engine=engine
-    )
-    return (df_hotrepo,)
-
-
-@app.cell(hide_code=True)
-def _(engine, mo):
-    df_type = mo.sql(
-        f"""
-        with cte as(SELECT top_k(type,10,true) as a FROM mv_github_events limit 1)
-        select a.1 as type,a.2 as cnt from cte array join a
-        """,
-        engine=engine
-    )
-    return (df_type,)
 
 
 @app.cell(hide_code=True)
