@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.13.15"
-app = marimo.App(width="medium")
+app = marimo.App(width="medium", app_title="GitHub Real-Time Analytics")
 
 
 @app.cell(hide_code=True)
