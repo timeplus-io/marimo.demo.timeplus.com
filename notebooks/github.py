@@ -76,7 +76,7 @@ def _(df_cnt, df_mv_cnt, get_count, get_mv_count, mo, set_count, set_mv_count):
 
 @app.cell
 def _(mo):
-    days=mo.ui.slider(start=1, stop=10, step=1,show_value=True, value=7)
+    days=mo.ui.slider(start=1, stop=10, step=1,show_value=True, value=2)
     return (days,)
 
 
@@ -105,7 +105,7 @@ def _(days, engine, mo):
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
             "Repo":repo_link,"Description":row[2],
-            "Total Stars":f'{row[3]:,}',"Language":row[4],
+            "Language":row[4],"Total Stars":f'{row[3]:,}',
             f"New Stars for last {days.value} days": f'{row[1]:,}'
         })
     repo_table = mo.ui.table(
