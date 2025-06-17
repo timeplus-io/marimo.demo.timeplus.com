@@ -106,7 +106,7 @@ def _(days, engine, mo):
         GROUP BY repo
       ), top20 AS(
         SELECT
-          current.repo as repo, current.new_followers as new_followers, current.current_rank, if_null(previous.previous_rank, 'N/A') AS previous_rank, multi_if(previous.previous_rank IS NULL, '🆕', current.current_rank < previous.previous_rank, '🚀', current.current_rank > previous.previous_rank, '🔻', '→') AS trend
+          current.repo as repo, current.new_followers as new_followers, multi_if(previous.previous_rank IS NULL, '🆕', current.current_rank < previous.previous_rank, '🚀 (was '||to_string(previous.previous_rank)||')', current.current_rank > previous.previous_rank, '🔻 (was '||to_string(previous.previous_rank)||')', '→') AS trend
         FROM current_ranks AS current
         LEFT JOIN previous_ranks AS previous ON current.repo = previous.repo
         WHERE current.current_rank <= 20
@@ -116,7 +116,7 @@ def _(days, engine, mo):
         info:description AS description,to_int32_or_zero(info:stargazers_count) AS stars,if('null'=info:language,'',info:language) AS language,
         * FROM top20
       )
-      SELECT repo,new_followers, description, stars, language,previous_rank,trend FROM enriched
+      SELECT repo,new_followers, description, stars, language,trend FROM enriched
         """,
         engine=engine
     )
@@ -125,10 +125,10 @@ def _(days, engine, mo):
         owner_image = mo.image(src=f'https://github.com/{row[0].split('/')[0]}.png', width=20, height=20)
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
-            "Repo":repo_link,"Trend":row[6],"Last Rank":row[5], 
+            "Repo":repo_link,"Trend":row[5], 
             "Description":row[2],
             "Language":row[4],"Total Stars":f'{row[3]:,}',
-            f"New Stars for last {days.value} days": f'{row[1]:,}'
+            f"Stars for last {days.value} days": f'{row[1]:,}'
         })
     repo_table = mo.ui.table(
         _ui,selection=None,show_column_summaries=False
