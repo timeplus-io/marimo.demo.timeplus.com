@@ -106,7 +106,11 @@ def _(days, engine, mo):
         GROUP BY repo
       ), top20 AS(
         SELECT
-          current.repo as repo, current.new_followers as new_followers, multi_if(previous.previous_rank IS NULL, '🆕', current.current_rank < previous.previous_rank, '🚀 (was '||to_string(previous.previous_rank)||')', current.current_rank > previous.previous_rank, '🔻 (was '||to_string(previous.previous_rank)||')', '→') AS trend
+          current.repo as repo, current.new_followers as new_followers, multi_if(previous.previous_rank IS NULL, '🆕', 
+    current.current_rank < previous.previous_rank-50, '🚀🚀 (was '||to_string(previous.previous_rank)||')',             
+    current.current_rank < previous.previous_rank, '🚀 (was '||to_string(previous.previous_rank)||')', 
+    current.current_rank > previous.previous_rank+8, '🔻🔻 (was '||to_string(previous.previous_rank)||')',
+    current.current_rank > previous.previous_rank, '🔻 (was '||to_string(previous.previous_rank)||')', '→') AS trend
         FROM current_ranks AS current
         LEFT JOIN previous_ranks AS previous ON current.repo = previous.repo
         WHERE current.current_rank <= 20
@@ -122,7 +126,6 @@ def _(days, engine, mo):
     )
     _ui = []
     for row in _df.iter_rows():
-        owner_image = mo.image(src=f'https://github.com/{row[0].split('/')[0]}.png', width=20, height=20)
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
             "Repo":repo_link,"Trend":row[5], 
