@@ -89,13 +89,34 @@ def _(days, mo):
 @app.cell
 def _(days, engine, mo):
     _df = mo.sql(
-        f"""SELECT repo,new_followers, description, stars, language FROM(SELECT gh_api('https://api.github.com/repos/'||repo) as info,
-        info:description AS description,to_int32_or_zero(info:stargazers_count) AS stars,info:language AS language,
-        * FROM(
-        SELECT repo, count(distinct actor) AS new_followers
-        FROM table(mv_github_events) WHERE type ='WatchEvent' and _tp_time>now()-{days.value}d
-        GROUP BY repo ORDER BY new_followers desc
-        limit 20))
+        f"""  
+    WITH current_ranks AS
+      (
+        SELECT
+          repo, count_distinct(actor) AS new_followers, rank() OVER (ORDER BY new_followers DESC) AS current_rank
+        FROM table(mv_github_events)
+        WHERE (type = 'WatchEvent') AND (_tp_time > (now() - {days.value}d))
+        GROUP BY repo ORDER BY new_followers DESC LIMIT 20
+      ), previous_ranks AS
+      (
+        SELECT
+          repo, rank() OVER (ORDER BY count_distinct(actor) DESC) AS previous_rank
+        FROM table(mv_github_events)
+        WHERE (type = 'WatchEvent') AND ((_tp_time >= (now() - {2*days.value}d)) AND (_tp_time <= (now() - {days.value}d)))
+        GROUP BY repo
+      ), top20 AS(
+        SELECT
+          current.repo as repo, current.new_followers as new_followers, current.current_rank, if_null(previous.previous_rank, 'N/A') AS previous_rank, multi_if(previous.previous_rank IS NULL, '🆕', current.current_rank < previous.previous_rank, '🚀', current.current_rank > previous.previous_rank, '🔻', '→') AS trend
+        FROM current_ranks AS current
+        LEFT JOIN previous_ranks AS previous ON current.repo = previous.repo
+        WHERE current.current_rank <= 20
+        ORDER BY current.current_rank ASC
+      ), enriched AS(
+        SELECT gh_api('https://api.github.com/repos/'||repo) as info,
+        info:description AS description,to_int32_or_zero(info:stargazers_count) AS stars,if('null'=info:language,'',info:language) AS language,
+        * FROM top20
+      )
+      SELECT repo,new_followers, description, stars, language,previous_rank,trend FROM enriched
         """,
         engine=engine
     )
@@ -104,7 +125,8 @@ def _(days, engine, mo):
         owner_image = mo.image(src=f'https://github.com/{row[0].split('/')[0]}.png', width=20, height=20)
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
-            "Repo":repo_link,"Description":row[2],
+            "Repo":repo_link,"Trend":row[6],"Last Rank":row[5], 
+            "Description":row[2],
             "Language":row[4],"Total Stars":f'{row[3]:,}',
             f"New Stars for last {days.value} days": f'{row[1]:,}'
         })
