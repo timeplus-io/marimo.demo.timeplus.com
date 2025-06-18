@@ -89,7 +89,7 @@ def _(days, mo):
 @app.cell
 def _(days, engine, mo):
     _df = mo.sql(
-        f"""  
+        f"""
     WITH current_ranks AS
       (
         SELECT
@@ -106,9 +106,9 @@ def _(days, engine, mo):
         GROUP BY repo
       ), top20 AS(
         SELECT
-          current.repo as repo, current.new_followers as new_followers, multi_if(previous.previous_rank IS NULL, '🆕', 
-    current.current_rank < previous.previous_rank-50, '🚀🚀 (was '||to_string(previous.previous_rank)||')',             
-    current.current_rank < previous.previous_rank, '🚀 (was '||to_string(previous.previous_rank)||')', 
+          current.repo as repo, current.new_followers as new_followers, multi_if(previous.previous_rank = 0, '🆕',
+    current.current_rank < previous.previous_rank-50, '🚀🚀 (was '||to_string(previous.previous_rank)||')',
+    current.current_rank < previous.previous_rank, '🚀 (was '||to_string(previous.previous_rank)||')',
     current.current_rank > previous.previous_rank+8, '🔻🔻 (was '||to_string(previous.previous_rank)||')',
     current.current_rank > previous.previous_rank, '🔻 (was '||to_string(previous.previous_rank)||')', '→') AS trend
         FROM current_ranks AS current
@@ -128,7 +128,7 @@ def _(days, engine, mo):
     for row in _df.iter_rows():
         repo_link = mo.Html(f'<a style="display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; text-decoration: none; color: #0B66BC;" href="https://github.com/{row[0]}" target="_blank"><img src="https://github.com/{row[0].split('/')[0]}.png" width=20 height=20>{row[0]}</a>')
         _ui.append({
-            "Repo":repo_link,"Trend":row[5], 
+            "Repo":repo_link,"Trend":row[5],
             "Description":row[2],
             "Language":row[4],"Total Stars":f'{row[3]:,}',
             f"Stars for last {days.value} days": f'{row[1]:,}'
