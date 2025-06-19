@@ -139,7 +139,7 @@ def _(days, engine, mo):
     repo_table
     return
 
-
+'''
 @app.cell
 def _(mo):
     mo.md(r"""# Explore repos by event type""")
@@ -197,7 +197,7 @@ def _(alt, engine, mo, typeWhere):
                 y=alt.Y('repo',sort=alt.EncodingSortField(field='cnt',order='descending')),)
     )
     return (chart_repos,)
-
+'''
 
 @app.cell
 def _(mo):
