@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.13.15"
+__generated_with = "0.14.0"
 app = marimo.App(width="medium", app_title="GitHub Real-Time Analytics")
 
 
@@ -9,11 +9,13 @@ def _():
     import marimo as mo
     import sqlalchemy
     import altair as alt
+    import timeplus_connect
+    import pandas as pd
 
     DATABASE_URL = "timeplus://demo:demo123@34.82.135.191:8123"
     #DATABASE_URL = "timeplus://play.us-west1-a.c.tpdemo2025.internal:8123"
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    return alt, engine, mo
+    return engine, mo, pd, timeplus_connect
 
 
 @app.cell
@@ -24,6 +26,8 @@ def _(mo):
     👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events).
 
     Source code at [GitHub](https://github.com/timeplus-io/marimo.demo.timeplus.com/blob/main/notebooks/github.py) | [More details of this demo]([https://demos.timeplus.com](https://demos.timeplus.com/#/id/github))
+
+    ## Live Events (10% Sample)
     """
     )
     return
@@ -45,6 +49,23 @@ def _(cntRefresh):
 def _(mo):
     get_mv_count, set_mv_count = mo.state(0)
     return get_mv_count, set_mv_count
+
+
+@app.cell
+def _(streaming_table):
+    streaming_table("""
+    select to_string(created_at) as "Created At (UTC)", case 
+    when type='PushEvent' then actor||' pushed to'||repo
+    when type='CreateEvent' then actor||' created '||repo
+    when type='ForkEvent' then actor||' forked '||payload:forkee.full_name||' as '||repo
+    when type='PullRequestEvent' then actor||' '||payload:action||'ed pr for '||repo
+    when type='WatchEvent' then actor||' added 🌟 to '||repo
+    when type='ReleaseEvent' then actor||' released '||repo
+    else 'unknown'
+    end as "10% Sample Events"
+    from github_events where id like '%0' and not type in ('PublicEvent','IssueCommentEvent','IssuesEvent','PullRequestReviewEvent','PullRequestReviewCommentEvent','DeleteEvent') SETTINGS query_mode='streaming'""",limit=100
+        )
+    return
 
 
 @app.cell
@@ -139,65 +160,6 @@ def _(days, engine, mo):
     repo_table
     return
 
-'''
-@app.cell
-def _(mo):
-    mo.md(r"""# Explore repos by event type""")
-    return
-
-
-@app.cell
-def _(chart_repos, chart_types, mo):
-    mo.hstack([chart_types,chart_repos],widths=[0,1])
-    return
-
-
-@app.cell(hide_code=True)
-def _(chart_types):
-    _type=' '
-    if chart_types.selections.get("select_point"):
-        _array=chart_types.selections["select_point"].get("type",None)
-        if _array:
-            _type=f"WHERE type='{_array[0]}'"
-    typeWhere=_type
-    return (typeWhere,)
-
-
-@app.cell
-def _(alt, engine, mo):
-    _df_type = mo.sql(
-        f"""
-        with cte as(SELECT top_k(type,10,true) as a FROM mv_github_events limit 1)
-        select a.1 as type,a.2 as cnt from cte array join a
-        """,
-        engine=engine,output=False
-    )
-    chart_types = mo.ui.altair_chart(
-        alt.Chart(_df_type, height=150, width=150)
-        .mark_arc()
-        .encode(theta="cnt", color="type"),
-        legend_selection=False
-    )
-    return (chart_types,)
-
-
-@app.cell
-def _(alt, engine, mo, typeWhere):
-    _df_hotrepo = mo.sql(
-        f"""
-        with cte as(SELECT top_k(repo,10,true) as a FROM mv_github_events {typeWhere} limit 1)
-        select a.1 as repo,a.2 as cnt from cte array join a
-        """,
-        engine=engine,output=False
-    )
-    chart_repos = mo.ui.altair_chart(
-        alt.Chart(_df_hotrepo, height=200)
-        .mark_bar()
-        .encode(x='cnt',
-                y=alt.Y('repo',sort=alt.EncodingSortField(field='cnt',order='descending')),)
-    )
-    return (chart_repos,)
-'''
 
 @app.cell
 def _(mo):
@@ -229,6 +191,38 @@ def cell_cnt(cntRefresh, engine, mo):
         engine=engine
     )
     return (df_cnt,)
+
+
+@app.cell
+def _(timeplus_connect):
+    def get_client():
+        return timeplus_connect.get_client(
+            host="34.82.135.191",
+            port=8123,
+            username="demo",
+            password="demo123"
+        )
+    return (get_client,)
+
+
+@app.cell
+def _(get_client, mo, pd):
+    def _streaming_table(sql: str, limit: int = 5):
+        _df = pd.DataFrame()
+        mo.output.replace(_df)
+        with get_client().query_arrow_stream(
+            f"SELECT * FROM ({sql}) LIMIT {limit}"
+        ) as _stream:
+            for _batch in _stream:
+                #_df = pd.concat([_df, _batch.to_pandas()], ignore_index=True)
+                _df = _batch.to_pandas()
+                mo.output.replace(_df)
+
+
+    def streaming_table(sql: str, limit: int = 5):
+        thread = mo.Thread(target=_streaming_table, args=(sql, limit))
+        thread.start()
+    return (streaming_table,)
 
 
 if __name__ == "__main__":
