@@ -95,14 +95,14 @@ def _(days, engine, mo):
         SELECT
           repo, count_distinct(actor) AS new_followers, rank() OVER (ORDER BY new_followers DESC) AS current_rank
         FROM table(mv_github_events)
-        WHERE (type = 'WatchEvent') AND (_tp_time > (now() - {days.value}d))
+        WHERE _tp_time > (now() - {days.value}d) AND type = 'WatchEvent'
         GROUP BY repo ORDER BY new_followers DESC LIMIT 20
       ), previous_ranks AS
       (
         SELECT
           repo, rank() OVER (ORDER BY count_distinct(actor) DESC) AS previous_rank
         FROM table(mv_github_events)
-        WHERE (type = 'WatchEvent') AND ((_tp_time >= (now() - {2*days.value}d)) AND (_tp_time <= (now() - {days.value}d)))
+        WHERE ((_tp_time >= (now() - {2*days.value}d)) AND (_tp_time <= (now() - {days.value}d))) AND type = 'WatchEvent'
         GROUP BY repo
       ), top20 AS(
         SELECT
