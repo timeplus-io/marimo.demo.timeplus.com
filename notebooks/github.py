@@ -15,7 +15,7 @@ def _():
     DATABASE_URL = "timeplus://demo:demo123@34.82.135.191:8123"
     #DATABASE_URL = "timeplus://play.us-west1-a.c.tpdemo2025.internal:8123"
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    return engine, mo, pd, timeplus_connect
+    return engine, mo, timeplus_connect
 
 
 @app.cell
@@ -30,6 +30,12 @@ def _(mo):
     ## Live Events (10% Sample)
     """
     )
+    return
+
+
+@app.cell
+def _(get_events, mo):
+    mo.ui.table(data=get_events(),selection=None)
     return
 
 
@@ -206,23 +212,29 @@ def _(timeplus_connect):
 
 
 @app.cell
-def _(get_client, mo, pd):
+def _(get_client, mo, set_events):
+    from collections import deque
+    five = deque(maxlen=5)
     def _streaming_table(sql: str, limit: int = 5):
-        _df = pd.DataFrame()
-        mo.output.replace(_df)
         with get_client().query_arrow_stream(
             f"SELECT * FROM ({sql}) LIMIT {limit}"
         ) as _stream:
             for _batch in _stream:
-                #_df = pd.concat([_df, _batch.to_pandas()], ignore_index=True)
-                _df = _batch.to_pandas()
-                mo.output.replace(_df)
+                for row in _batch.to_pylist():
+                    five.append(row)
+                set_events(list(five))
 
 
     def streaming_table(sql: str, limit: int = 5):
         thread = mo.Thread(target=_streaming_table, args=(sql, limit))
         thread.start()
     return (streaming_table,)
+
+
+@app.cell
+def _(mo):
+    get_events, set_events = mo.state(value=[])
+    return get_events, set_events
 
 
 if __name__ == "__main__":
