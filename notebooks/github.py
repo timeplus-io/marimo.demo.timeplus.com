@@ -25,7 +25,7 @@ def _(mo):
     # Live GitHub Events
     👋 This is a live notebook, built with [Timeplus](https://github.com/timeplus-io/proton) and [marimo](https://marimo.io), showing streaming data from GitHub via [a public facing Kafka topic](http://kafka.demo.timeplus.com:8080/topics/github_events).
 
-    Source code at [GitHub](https://github.com/timeplus-io/marimo.demo.timeplus.com/blob/main/notebooks/github.py) | [More details of this demo]([https://demos.timeplus.com](https://demos.timeplus.com/#/id/github))
+    Source code at [GitHub](https://github.com/timeplus-io/marimo.demo.timeplus.com/blob/main/notebooks/github.py) | [More details of this demo](https://demos.timeplus.com/#/id/github)
 
     ## Live Events (10% Sample)
     """
