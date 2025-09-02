@@ -4,15 +4,18 @@ import os
 __generated_with = "0.14.0"
 app = marimo.App(width="medium", app_title="GitHub Real-Time Analytics")
 
-# read user, password, url, port from env
-host = os.getenv("TP_HOST", "localhost")
-port = os.getenv("TP_PORT", "8123")       
-username = os.getenv("TP_USERNAME", "demo")
-password = os.getenv("TP_PASSWORD", "demo123")
-
+@app.cell
+def _():
+    # Move environment variable reading inside a cell
+    import os
+    host = os.getenv("TP_HOST", "localhost")
+    port = os.getenv("TP_PORT", "8123")       
+    username = os.getenv("TP_USERNAME", "demo")
+    password = os.getenv("TP_PASSWORD", "demo123")
+    return host, port, username, password
 
 @app.cell(hide_code=True)
-def _():
+def _(host, port, username, password):
     import marimo as mo
     import sqlalchemy
     import altair as alt
@@ -21,8 +24,7 @@ def _():
     
     DATABASE_URL = f"timeplus://{username}:{password}@{host}:{port}"
     engine = sqlalchemy.create_engine(DATABASE_URL)
-    return engine, mo, timeplus_connect
-
+    return DATABASE_URL, engine, mo, timeplus_connect, alt, pd, sqlalchemy
 
 @app.cell
 def _(mo):
@@ -38,30 +40,25 @@ def _(mo):
     )
     return
 
-
 @app.cell
 def _(get_events, mo):
     mo.ui.table(data=get_events(),selection=None)
     return
-
 
 @app.cell
 def _(mo):
     cntRefresh = mo.ui.refresh(options=["4s"],default_interval="4s")
     return (cntRefresh,)
 
-
 @app.cell
 def _(cntRefresh):
     cntRefresh.style({"display": None})
     return
 
-
 @app.cell
 def _(mo):
     get_mv_count, set_mv_count = mo.state(0)
     return get_mv_count, set_mv_count
-
 
 @app.cell
 def _(streaming_table):
@@ -78,7 +75,6 @@ def _(streaming_table):
     from github.github_events where id like '%0' and not type in ('PublicEvent','IssueCommentEvent','IssuesEvent','PullRequestReviewEvent','PullRequestReviewCommentEvent','DeleteEvent') SETTINGS query_mode='streaming'""",limit=100
         )
     return
-
 
 @app.cell
 def _(df_cnt, df_mv_cnt, get_count, get_mv_count, mo, set_count, set_mv_count):
@@ -106,18 +102,15 @@ def _(df_cnt, df_mv_cnt, get_count, get_mv_count, mo, set_count, set_mv_count):
     )
     return
 
-
 @app.cell
 def _(mo):
     days=mo.ui.slider(start=1, stop=10, step=1,show_value=True, value=2)
     return (days,)
 
-
 @app.cell
 def _(days, mo):
-    mo.md(f"""## 🔥 Top 20 Projects with most new stars (for last {days} days)""")
+    mo.md(f"""## 🔥 Top 20 Projects with most new stars (for last {days.value} days)""")
     return
-
 
 @app.cell
 def _(days, engine, mo):
@@ -170,14 +163,12 @@ def _(days, engine, mo):
         _ui,selection=None,show_column_summaries=False
     )
     repo_table
-    return
-
+    return repo_table
 
 @app.cell
 def _(mo):
     get_count, set_count = mo.state(0)
     return get_count, set_count
-
 
 @app.cell
 def _(cntRefresh, engine, mo):
@@ -191,7 +182,6 @@ def _(cntRefresh, engine, mo):
     )
     return (df_mv_cnt,)
 
-
 @app.cell(hide_code=True)
 def cell_cnt(cntRefresh, engine, mo):
     df_cnt = mo.sql(
@@ -204,9 +194,8 @@ def cell_cnt(cntRefresh, engine, mo):
     )
     return (df_cnt,)
 
-
 @app.cell
-def _(timeplus_connect):
+def _(host, port, username, password, timeplus_connect):
     def get_client():
         return timeplus_connect.get_client(
             host=host,
@@ -215,7 +204,6 @@ def _(timeplus_connect):
             password=password
         )
     return (get_client,)
-
 
 @app.cell
 def _(get_client, mo, set_events):
@@ -230,18 +218,15 @@ def _(get_client, mo, set_events):
                     five.append(row)
                 set_events(list(five))
 
-
     def streaming_table(sql: str, limit: int = 5):
         thread = mo.Thread(target=_streaming_table, args=(sql, limit))
         thread.start()
     return (streaming_table,)
 
-
 @app.cell
 def _(mo):
     get_events, set_events = mo.state(value=[])
     return get_events, set_events
-
 
 if __name__ == "__main__":
     app.run()
