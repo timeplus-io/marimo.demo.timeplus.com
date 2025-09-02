@@ -127,14 +127,14 @@ def _(days, engine, mo):
       (
         SELECT
           repo, count_distinct(actor) AS new_followers, rank() OVER (ORDER BY new_followers DESC) AS current_rank
-        FROM table(mv_github_events)
+        FROM table(github.mv_github_events)
         WHERE _tp_time > (now() - {days.value}d) AND type = 'WatchEvent'
         GROUP BY repo ORDER BY new_followers DESC LIMIT 20
       ), previous_ranks AS
       (
         SELECT
           repo, rank() OVER (ORDER BY count_distinct(actor) DESC) AS previous_rank
-        FROM table(mv_github_events)
+        FROM table(github.mv_github_events)
         WHERE ((_tp_time >= (now() - {2*days.value}d)) AND (_tp_time <= (now() - {days.value}d))) AND type = 'WatchEvent'
         GROUP BY repo
       ), top20 AS(
@@ -184,7 +184,7 @@ def _(cntRefresh, engine, mo):
     df_mv_cnt = mo.sql(
         f"""
         -- {cntRefresh.value}
-        SELECT count() as cnt FROM mv_github_events
+        SELECT count() as cnt FROM github.mv_github_events
         """,
         output=False,
         engine=engine
@@ -197,7 +197,7 @@ def cell_cnt(cntRefresh, engine, mo):
     df_cnt = mo.sql(
         f"""
         -- {cntRefresh.value}
-        SELECT count() as cnt FROM github_events
+        SELECT count() as cnt FROM github.github_events
         """,
         output=False,
         engine=engine
@@ -209,10 +209,10 @@ def cell_cnt(cntRefresh, engine, mo):
 def _(timeplus_connect):
     def get_client():
         return timeplus_connect.get_client(
-            host="34.82.135.191",
-            port=8123,
-            username="demo",
-            password="demo123"
+            host=host,
+            port=port,
+            username=username,
+            password=password
         )
     return (get_client,)
 
