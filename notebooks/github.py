@@ -1,7 +1,14 @@
 import marimo
+import os
 
 __generated_with = "0.14.0"
 app = marimo.App(width="medium", app_title="GitHub Real-Time Analytics")
+
+# read user, password, url, port from env
+host = os.getenv("TP_HOST", "localhost")
+port = os.getenv("TP_PORT", "8123")       
+username = os.getenv("TP_USERNAME", "demo")
+password = os.getenv("TP_PASSWORD", "demo123")
 
 
 @app.cell(hide_code=True)
@@ -11,9 +18,8 @@ def _():
     import altair as alt
     import timeplus_connect
     import pandas as pd
-
-    DATABASE_URL = "timeplus://demo:demo123@34.82.135.191:8123"
-    #DATABASE_URL = "timeplus://play.us-west1-a.c.tpdemo2025.internal:8123"
+    
+    DATABASE_URL = f"timeplus://{username}:{password}@{host}:{port}"
     engine = sqlalchemy.create_engine(DATABASE_URL)
     return engine, mo, timeplus_connect
 
@@ -69,7 +75,7 @@ def _(streaming_table):
     when type='ReleaseEvent' then actor||' released '||repo
     else 'unknown'
     end as "10% Sample Events"
-    from github_events where id like '%0' and not type in ('PublicEvent','IssueCommentEvent','IssuesEvent','PullRequestReviewEvent','PullRequestReviewCommentEvent','DeleteEvent') SETTINGS query_mode='streaming'""",limit=100
+    from github.github_events where id like '%0' and not type in ('PublicEvent','IssueCommentEvent','IssuesEvent','PullRequestReviewEvent','PullRequestReviewCommentEvent','DeleteEvent') SETTINGS query_mode='streaming'""",limit=100
         )
     return
 

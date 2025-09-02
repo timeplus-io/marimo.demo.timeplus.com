@@ -1,7 +1,14 @@
+import os
 import marimo
 
 __generated_with = "0.13.15"
 app = marimo.App(width="medium", app_title="Coalesced Mutable Stream in Timeplus")
+
+# read user, password, url, port from env
+host = os.getenv("TP_HOST", "localhost")
+port = os.getenv("TP_PORT", "8123")       
+username = os.getenv("TP_USERNAME", "demo")
+password = os.getenv("TP_PASSWORD", "demo123")
 
 
 @app.cell
@@ -13,9 +20,8 @@ def _():
 @app.cell
 def _():
     import sqlalchemy
-
-    DATABASE_URL = "timeplus://demo:demo123@34.82.135.191:8123"
-    #DATABASE_URL = "timeplus://play.us-west1-a.c.tpdemo2025.internal:8123"
+    
+    DATABASE_URL = f"timeplus://{username}:{password}@{host}:{port}"
     engine = sqlalchemy.create_engine(DATABASE_URL)
     return (engine,)
 
